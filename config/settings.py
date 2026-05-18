@@ -32,7 +32,7 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "https://papeleria-lapiz.onrender.com",
-    "https://tu-sitio.netlify.app",  # ← Pondrás tu URL real de Netlify aquí
+    "https://papeleria-lapiz.netlify.app"
 ]
 
 
