@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Routes, Route, Link } from "react-router-dom";
 
-const API_URL = "http://localhost:8000/api/productos/";
+const API_URL = "https://papeleria-lapiz.onrender.com/api/productos/";
 
 // 🏠 LANDING PAGE
 const HomePage = () => (
