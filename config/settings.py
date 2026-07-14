@@ -1,14 +1,14 @@
 import os
 from pathlib import Path
-import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-SECRET_KEY = 'django-insecure-tu-clave-secreta-aqui-cambiar-en-prod'
-DEBUG = True
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.onrender.com', '.netlify.app']
+
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-cambiar-en-produccion')
+DEBUG = os.getenv('DJANGO_DEBUG', 'True') == 'True'
+ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 INSTALLED_APPS = [
-    'corsheaders',          # 🔴 DEBE SER EL PRIMERO
+    'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -19,7 +19,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # 🔴 DEBE SER EL PRIMERO
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -29,14 +29,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "https://papeleria-lapiz.onrender.com",
-    "https://papeleria-lapiz.netlify.app"
-]
-
-
 ROOT_URLCONF = 'config.urls'
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -52,11 +46,40 @@ TEMPLATES = [
         },
     },
 ]
+
 WSGI_APPLICATION = 'config.wsgi.application'
 
+# BASE DE DATOS MYSQL
 DATABASES = {
-    'default': dj_database_url.config(default='sqlite:///db.sqlite3')
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'papeleria_db',
+        'USER': 'root',
+        'PASSWORD': '',  # Pon tu contraseña si configuraste en XAMPP
+        'HOST': 'localhost',
+        'PORT': '3306',
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'"
+        }
+    }
 }
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+AUTH_PASSWORD_VALIDATORS = [
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+]
+
+LANGUAGE_CODE = 'es-mx'
+TIME_ZONE = 'America/Mexico_City'
+USE_I18N = True
+USE_TZ = True
+
 STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# CORS
+CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173').split(',')
+CORS_ALLOW_CREDENTIALS = True
