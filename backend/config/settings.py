@@ -5,7 +5,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-cambiar-en-produccion')
 DEBUG = os.getenv('DJANGO_DEBUG', 'True') == 'True'
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost').split(',')
+
+# CORRECCIÓN: Valor por defecto que incluye los dominios de producción
+ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,.onrender.com,.netlify.app').split(',')
 
 INSTALLED_APPS = [
     'corsheaders',
@@ -50,14 +52,12 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # BASE DE DATOS MYSQL
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        # Si está en Render, usa las variables de entorno. Si está en tu PC, usa estos valores por defecto (XAMPP).
         'NAME': os.getenv('DB_NAME', 'papeleria_db'),
         'USER': os.getenv('DB_USER', 'root'),
-        'PASSWORD': os.getenv('DB_PASSWORD', ''), # Déjalo vacío si no pusiste contraseña en XAMPP
+        'PASSWORD': os.getenv('DB_PASSWORD', ''),
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': os.getenv('DB_PORT', '3306'),
         'OPTIONS': {
@@ -83,7 +83,13 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS
-CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173').split(',')
+CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173').split(',')
 CORS_ALLOW_CREDENTIALS = True
 
-
+# NUEVO: Necesario para que Netlify pueda hacer peticiones POST/PUT/DELETE a Render
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.onrender.com',
+    'https://*.netlify.app',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+]
