@@ -82,3 +82,12 @@ def categorias_api(request):
     if request.method == "GET":
         qs = Categoria.objects.filter(activa=True).values('id', 'nombre')
         return JsonResponse(list(qs), safe=False)
+
+
+from django.http import JsonResponse
+
+def home(request):
+    return JsonResponse({
+        "mensaje": "API de Papelería El Lápiz Dorado funcionando correctamente en Render",
+        "endpoints": ["/api/productos/", "/api/categorias/", "/admin/"]
+    })
