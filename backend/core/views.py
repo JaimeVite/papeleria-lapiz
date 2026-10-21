@@ -91,3 +91,34 @@ def home(request):
         "mensaje": "API de Papelería El Lápiz Dorado funcionando correctamente en Render",
         "endpoints": ["/api/productos/", "/api/categorias/", "/admin/"]
     })
+
+@csrf_exempt
+def seed_categorias(request):
+    """Endpoint temporal para insertar categorías de prueba"""
+    from django.utils import timezone
+    
+    categorias_data = [
+        {'nombre': 'Oficina', 'descripcion': 'Material de oficina'},
+        {'nombre': 'Escolar', 'descripcion': 'Útiles escolares'},
+        {'nombre': 'Tecnología', 'descripcion': 'Dispositivos tecnológicos'},
+        {'nombre': 'Arte', 'descripcion': 'Material de arte'},
+    ]
+    
+    creadas = []
+    for data in categorias_data:
+        cat, created = Categoria.objects.get_or_create(
+            nombre=data['nombre'],
+            defaults={
+                'descripcion': data['descripcion'],
+                'fecha_creacion': timezone.now().date(),
+                'activa': True
+            }
+        )
+        if created:
+            creadas.append(cat.nombre)
+    
+    return JsonResponse({
+        'status': 'ok',
+        'categorias_creadas': creadas,
+        'total': Categoria.objects.count()
+    })

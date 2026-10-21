@@ -1,14 +1,20 @@
 import os
 from pathlib import Path
 
+# Construye rutas como: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-cambiar-en-produccion')
+# Clave secreta y modo de depuración desde variables de entorno
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-clave-de-desarrollo-local-123')
 DEBUG = os.getenv('DJANGO_DEBUG', 'True') == 'True'
 
-# CORRECCIÓN: Valor por defecto que incluye los dominios de producción
-ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,.onrender.com,.netlify.app').split(',')
+# Hosts permitidos: localhost para desarrollo, dominios de Render y Netlify para producción
+ALLOWED_HOSTS = os.getenv(
+    'DJANGO_ALLOWED_HOSTS', 
+    'localhost,127.0.0.1,.onrender.com,.netlify.app'
+).split(',')
 
+# Aplicaciones instaladas (corsheaders debe estar antes que las apps de django)
 INSTALLED_APPS = [
     'corsheaders',
     'django.contrib.admin',
@@ -17,9 +23,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'core',
+    'core',  # Tu aplicación principal
 ]
 
+# Middleware (¡MUY IMPORTANTE! CorsMiddleware debe ser el PRIMERO de todos)
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -51,7 +58,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# BASE DE DATOS MYSQL
+# ==========================================================
+# CONFIGURACIÓN DE BASE DE DATOS (MySQL para Local y Aiven)
+# ==========================================================
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
@@ -66,6 +75,7 @@ DATABASES = {
     }
 }
 
+# Validación de contraseñas
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -73,20 +83,29 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
+# Internacionalización
 LANGUAGE_CODE = 'es-mx'
 TIME_ZONE = 'America/Mexico_City'
 USE_I18N = True
 USE_TZ = True
 
+# Archivos estáticos
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CORS
-CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173').split(',')
+# ==========================================================
+# CONFIGURACIÓN DE CORS Y CSRF (Para que Netlify hable con Render)
+# ==========================================================
+# Orígenes permitidos para solicitudes CORS (GET, POST, etc.)
+CORS_ALLOWED_ORIGINS = os.getenv(
+    'CORS_ALLOWED_ORIGINS', 
+    'http://localhost:5173,http://127.0.0.1:5173,https://papeleria-lapiz.netlify.app'
+).split(',')
+
 CORS_ALLOW_CREDENTIALS = True
 
-# NUEVO: Necesario para que Netlify pueda hacer peticiones POST/PUT/DELETE a Render
+# Orígenes de confianza para CSRF (Obligatorio para POST, PUT, DELETE en Django 4.x+)
 CSRF_TRUSTED_ORIGINS = [
     'https://*.onrender.com',
     'https://*.netlify.app',
