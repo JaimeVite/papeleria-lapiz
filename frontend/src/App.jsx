@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 
-// URLs de la API (cambia esto por tu URL real de Render)
+// URLs de la API
 const API_PRODUCTOS = "https://papeleria-api-moat.onrender.com/api/productos/";
 const API_CATEGORIAS = "https://papeleria-api-moat.onrender.com/api/categorias/";
-
 function App() {
-  const [vista, setVista] = useState('home'); // 'home' o 'inventario'
+  const [vista, setVista] = useState('home');
   
   // Estados para productos
   const [productos, setProductos] = useState([]);
@@ -20,21 +19,43 @@ function App() {
   
   // Estados para notificaciones
   const [mensaje, setMensaje] = useState('');
-  const [tipoMensaje, setTipoMensaje] = useState(''); // 'success' o 'error'
+  const [tipoMensaje, setTipoMensaje] = useState('');
+  const [cargando, setCargando] = useState(false);
 
-  // Cargar productos y categorías al iniciar
+  // Cargar datos cuando cambie la vista
   useEffect(() => {
     if (vista === 'inventario') {
-      cargarProductos();
-      cargarCategorias();
+      cargarDatos();
     }
   }, [vista]);
 
+  // Función para cargar todos los datos
+  const cargarDatos = async () => {
+    setCargando(true);
+    try {
+      await Promise.all([
+        cargarProductos(),
+        cargarCategorias()
+      ]);
+    } catch (error) {
+      console.error("Error cargando datos:", error);
+    } finally {
+      setCargando(false);
+    }
+  };
+
   // Función para cargar productos
   const cargarProductos = () => {
-    fetch(API_PRODUCTOS)
-      .then(res => res.json())
-      .then(data => setProductos(data))
+    return fetch(API_PRODUCTOS)
+      .then(res => {
+        if (!res.ok) throw new Error('Error al cargar productos');
+        return res.json();
+      })
+      .then(data => {
+        console.log("Productos cargados:", data);
+        setProductos(data);
+        return data;
+      })
       .catch(err => {
         console.error("Error cargando productos:", err);
         mostrarMensaje("No se pudo cargar el inventario.", 'error');
@@ -43,10 +64,19 @@ function App() {
 
   // Función para cargar categorías
   const cargarCategorias = () => {
-    fetch(API_CATEGORIAS)
-      .then(res => res.json())
-      .then(data => setCategorias(data))
-      .catch(err => console.error("Error cargando categorías:", err));
+    return fetch(API_CATEGORIAS)
+      .then(res => {
+        if (!res.ok) throw new Error('Error al cargar categorías');
+        return res.json();
+      })
+      .then(data => {
+        console.log("Categorías cargadas:", data);
+        setCategorias(data);
+        return data;
+      })
+      .catch(err => {
+        console.error("Error cargando categorías:", err);
+      });
   };
 
   // Función para mostrar mensajes
@@ -57,7 +87,7 @@ function App() {
   };
 
   // Función para crear o actualizar producto
-  const handleGuardar = () => {
+  const handleGuardar = async () => {
     if (!nombre || !precio || !stock) {
       mostrarMensaje("Por favor completa todos los campos obligatorios.", 'error');
       return;
@@ -67,52 +97,88 @@ function App() {
       nombre: nombre,
       precio: parseFloat(precio),
       stock: parseInt(stock),
-      categoria_id: categoriaId ==="" ? null : parseInt(categoriaId)
+      categoria_id: categoriaId === "" ? null : parseInt(categoriaId)
     };
 
-    const metodo = editandoId ? 'PUT' : 'POST';
-    const url = editandoId ? `${API_PRODUCTOS}${editandoId}/` : API_PRODUCTOS;
+   const metodo = editandoId ? 'PUT' : 'POST';
+const url = editandoId ? `${API_PRODUCTOS}${editandoId}/` : API_PRODUCTOS;
 
-    fetch(url, {
-      method: metodo,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(productoData)
-    })
-    .then(res => res.json())
-    .then(data => {
-      mostrarMensaje(editandoId ? "Producto actualizado exitosamente." : "Producto creado exitosamente.", 'success');
+    try {
+      const res = await fetch(url, {
+        method: metodo,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productoData)
+      });
+
+      if (!res.ok) throw new Error('Error en la petición');
+
+      const data = await res.json();
+      console.log("Respuesta del backend:", data);
+      
+      mostrarMensaje(
+        editandoId ? "✅ Producto actualizado exitosamente." : "✅ Producto creado exitosamente.", 
+        'success'
+      );
+      
       limpiarFormulario();
-      cargarProductos();
-    })
-    .catch(err => {
+      
+      // Recargar TODOS los datos después de guardar
+      setTimeout(() => {
+        cargarDatos();
+      }, 500);
+      
+    } catch (err) {
       console.error("Error:", err);
-      mostrarMensaje("Error al guardar el producto.", 'error');
-    });
+      mostrarMensaje("❌ Error al guardar el producto.", 'error');
+    }
   };
 
   // Función para editar producto
-  const handleEditar = (producto) => {
+  const handleEditar = async (producto) => {
+    console.log("Editando producto:", producto);
+    
+    // Asegurarse de que las categorías estén cargadas
+    if (categorias.length === 0) {
+      await cargarCategorias();
+    }
+    
     setEditandoId(producto.id);
     setNombre(producto.nombre);
     setPrecio(producto.precio);
     setStock(producto.stock);
-    setCategoriaId(producto.categoria_id || '');
+    
+    // Asignar la categoría del producto
+    const catId = producto.categoria_id || producto.categoria?.id || '';
+    setCategoriaId(catId);
+    
+    console.log("Categoría asignada:", catId);
+    
+    // Scroll suave hacia el formulario
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Función para eliminar producto
-  const handleEliminar = (id) => {
+  const handleEliminar = async (id) => {
     if (window.confirm("¿Estás seguro de eliminar este producto?")) {
-      fetch(`${API_PRODUCTOS}${id}/`, { method: 'DELETE' })
-        .then(res => res.json())
-        .then(() => {
-          mostrarMensaje("Producto eliminado exitosamente.", 'success');
-          cargarProductos();
-        })
-        .catch(err => {
-          console.error("Error:", err);
-          mostrarMensaje("Error al eliminar el producto.", 'error');
-        });
+      try {
+        const res = await fetch(`${API_PRODUCTOS}${id}/delete/`, { 
+  method: 'DELETE' 
+  });
+       
+        
+        if (!res.ok) throw new Error('Error al eliminar');
+        
+        mostrarMensaje("✅ Producto eliminado exitosamente.", 'success');
+        
+        // Recargar datos
+        setTimeout(() => {
+          cargarDatos();
+        }, 500);
+        
+      } catch (err) {
+        console.error("Error:", err);
+        mostrarMensaje("❌ Error al eliminar el producto.", 'error');
+      }
     }
   };
 
@@ -126,8 +192,10 @@ function App() {
   };
 
   // Obtener nombre de categoría por ID
-  const obtenerNombreCategoria = (categoriaId) => {
-    const categoria = categorias.find(cat => cat.id === categoriaId);
+  const obtenerNombreCategoria = (catId) => {
+    if (!catId) return 'Sin categoría';
+    
+    const categoria = categorias.find(cat => cat.id === catId);
     return categoria ? categoria.nombre : 'Sin categoría';
   };
 
@@ -169,7 +237,6 @@ function App() {
         {/* Sección informativa */}
         <div style={{ maxWidth: '1200px', margin: '3rem auto', padding: '0 2rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
-            {/* Nuestra Historia */}
             <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
               <h2 style={{ color: '#1E3A8A', marginBottom: '1rem' }}>📖 Nuestra Historia</h2>
               <p style={{ color: '#6B7280', lineHeight: '1.6' }}>
@@ -177,15 +244,13 @@ function App() {
               </p>
             </div>
 
-            {/* Misión */}
             <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-              <h2 style={{ color: '#1E3A8A', marginBottom: '1rem' }}> Misión</h2>
+              <h2 style={{ color: '#1E3A8A', marginBottom: '1rem' }}>🎯 Misión</h2>
               <p style={{ color: '#6B7280', lineHeight: '1.6' }}>
                 Brindar soluciones de papelería con calidad, precio justo y atención personalizada, apoyados en herramientas digitales que garanticen eficiencia operativa y satisfacción del cliente.
               </p>
             </div>
 
-            {/* Visión */}
             <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
               <h2 style={{ color: '#1E3A8A', marginBottom: '1rem' }}>🌟 Visión</h2>
               <p style={{ color: '#6B7280', lineHeight: '1.6' }}>
@@ -217,7 +282,8 @@ function App() {
           padding: '1rem 2rem',
           borderRadius: '8px',
           boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-          zIndex: 1000
+          zIndex: 1000,
+          animation: 'slideIn 0.3s ease-out'
         }}>
           {mensaje}
         </div>
@@ -246,7 +312,7 @@ function App() {
           ← Volver al Inicio
         </button>
         <h1 style={{ color: '#1E3A8A', fontSize: '2rem', fontWeight: 'bold' }}>
-          📦 Inventario Smart
+           Inventario Smart
         </h1>
         <div style={{ width: '120px' }}></div>
       </header>
@@ -391,7 +457,11 @@ function App() {
             📋 Registros Actuales ({productos.length})
           </h2>
           
-          {productos.length === 0 ? (
+          {cargando ? (
+            <p style={{ textAlign: 'center', color: '#6B7280', padding: '2rem' }}>
+              Cargando productos...
+            </p>
+          ) : productos.length === 0 ? (
             <p style={{ textAlign: 'center', color: '#6B7280', padding: '2rem' }}>
               No hay productos registrados. ¡Agrega el primero!
             </p>
@@ -443,7 +513,7 @@ function App() {
                             fontSize: '0.875rem'
                           }}
                         >
-                          ️ Editar
+                          ✏️ Editar
                         </button>
                         <button
                           onClick={() => handleEliminar(producto.id)}
