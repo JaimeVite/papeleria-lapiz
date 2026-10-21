@@ -1,200 +1,475 @@
-import { useState, useEffect } from "react";
-import { Routes, Route, Link } from "react-router-dom";
+import { useState, useEffect } from 'react';
 
-const API_URL = "https://papeleria-api-moat.onrender.com/api/productos/";
+// URLs de la API (cambia esto por tu URL real de Render)
+const API_PRODUCTOS = "https://papeleria-api-moat.onrender.com/api/productos/";
+const API_CATEGORIAS = "https://papeleria-api-moat.onrender.com/api/categorias/";
 
-// 🏠 LANDING PAGE
-const HomePage = () => (
-  <div className="min-h-screen bg-gray-50 text-gray-800 font-sans">
-    <header className="relative bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-700 text-white py-20 px-6 text-center overflow-hidden">
-      <div className="absolute inset-0 bg-black/10"></div>
-      <div className="relative z-10 max-w-4xl mx-auto">
-        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-4">Papelería "El Lápiz Dorado"</h1>
-        <p className="text-lg md:text-xl text-blue-100 mb-8">Tradición, innovación y eficiencia desde 1998</p>
-        <Link to="/inventario" className="inline-block bg-white text-indigo-700 font-bold py-3 px-8 rounded-full shadow-lg hover:bg-gray-100 hover:scale-105 transition-all duration-300">
-           Ir al Sistema de Inventario
-        </Link>
-      </div>
-    </header>
-    <section className="max-w-5xl mx-auto px-6 py-16 grid md:grid-cols-2 gap-12">
-      <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-        <h2 className="text-2xl font-bold text-indigo-700 mb-4">📜 Nuestra Historia</h2>
-        <p className="text-gray-600 leading-relaxed">
-          Fundada en 1998, <strong>Papelería El Lápiz Dorado</strong> nació como un pequeño negocio familiar con el objetivo de proveer materiales de calidad. A lo largo de 25 años, hemos evolucionado incorporando tecnología de gestión para optimizar nuestro inventario, reducir mermas y ofrecer un servicio ágil. Hoy digitalizamos nuestros procesos para mantenernos a la vanguardia.
-        </p>
-      </div>
-      <div className="space-y-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <h3 className="text-xl font-bold text-gray-800 mb-2"> Misión</h3>
-          <p className="text-gray-600">Brindar soluciones de papelería con calidad, precio justo y atención personalizada, apoyados en herramientas digitales que garanticen eficiencia operativa.</p>
-        </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <h3 className="text-xl font-bold text-gray-800 mb-2"> Visión</h3>
-          <p className="text-gray-600">Ser la papelería líder en gestión tecnológica en la región, reconocida por su innovación y compromiso con la comunidad educativa y empresarial.</p>
-        </div>
-      </div>
-    </section>
-    <footer className="bg-gray-900 text-gray-400 py-8 text-center text-sm">
-      <p>© {new Date().getFullYear()} Papelería El Lápiz Dorado • Desarrollo EC0727</p>
-    </footer>
-  </div>
-);
-
-// 📦 INVENTORY PAGE
-const InventoryPage = () => {
+function App() {
+  const [vista, setVista] = useState('home'); // 'home' o 'inventario'
+  
+  // Estados para productos
   const [productos, setProductos] = useState([]);
-  const [form, setForm] = useState({ nombre: "", precio: "", stock: "", categoria_id: "" });
-  const [editId, setEditId] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [initialLoad, setInitialLoad] = useState(true);
-  const [msg, setMsg] = useState({ type: "", text: "" });
+  const [nombre, setNombre] = useState('');
+  const [precio, setPrecio] = useState('');
+  const [stock, setStock] = useState('');
+  const [categoriaId, setCategoriaId] = useState('');
+  const [editandoId, setEditandoId] = useState(null);
+  
+  // Estados para categorías
+  const [categorias, setCategorias] = useState([]);
+  
+  // Estados para notificaciones
+  const [mensaje, setMensaje] = useState('');
+  const [tipoMensaje, setTipoMensaje] = useState(''); // 'success' o 'error'
 
-  const fetchProductos = async () => {
-    try {
-      const res = await fetch(API_URL);
-      if (!res.ok) throw new Error("Error de conexión");
-      setProductos(await res.json());
-    } catch (err) {
-      setMsg({ type: "error", text: "No se pudo cargar el inventario." });
-    } finally {
-      setInitialLoad(false);
+  // Cargar productos y categorías al iniciar
+  useEffect(() => {
+    if (vista === 'inventario') {
+      cargarProductos();
+      cargarCategorias();
+    }
+  }, [vista]);
+
+  // Función para cargar productos
+  const cargarProductos = () => {
+    fetch(API_PRODUCTOS)
+      .then(res => res.json())
+      .then(data => setProductos(data))
+      .catch(err => {
+        console.error("Error cargando productos:", err);
+        mostrarMensaje("No se pudo cargar el inventario.", 'error');
+      });
+  };
+
+  // Función para cargar categorías
+  const cargarCategorias = () => {
+    fetch(API_CATEGORIAS)
+      .then(res => res.json())
+      .then(data => setCategorias(data))
+      .catch(err => console.error("Error cargando categorías:", err));
+  };
+
+  // Función para mostrar mensajes
+  const mostrarMensaje = (texto, tipo) => {
+    setMensaje(texto);
+    setTipoMensaje(tipo);
+    setTimeout(() => setMensaje(''), 3000);
+  };
+
+  // Función para crear o actualizar producto
+  const handleGuardar = () => {
+    if (!nombre || !precio || !stock) {
+      mostrarMensaje("Por favor completa todos los campos obligatorios.", 'error');
+      return;
+    }
+
+    const productoData = {
+      nombre: nombre,
+      precio: parseFloat(precio),
+      stock: parseInt(stock),
+      categoria_id: categoriaId ? parseInt(categoriaId) : null
+    };
+
+    const metodo = editandoId ? 'PUT' : 'POST';
+    const url = editandoId ? `${API_PRODUCTOS}${editandoId}/` : API_PRODUCTOS;
+
+    fetch(url, {
+      method: metodo,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(productoData)
+    })
+    .then(res => res.json())
+    .then(data => {
+      mostrarMensaje(editandoId ? "Producto actualizado exitosamente." : "Producto creado exitosamente.", 'success');
+      limpiarFormulario();
+      cargarProductos();
+    })
+    .catch(err => {
+      console.error("Error:", err);
+      mostrarMensaje("Error al guardar el producto.", 'error');
+    });
+  };
+
+  // Función para editar producto
+  const handleEditar = (producto) => {
+    setEditandoId(producto.id);
+    setNombre(producto.nombre);
+    setPrecio(producto.precio);
+    setStock(producto.stock);
+    setCategoriaId(producto.categoria_id || '');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Función para eliminar producto
+  const handleEliminar = (id) => {
+    if (window.confirm("¿Estás seguro de eliminar este producto?")) {
+      fetch(`${API_PRODUCTOS}${id}/`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(() => {
+          mostrarMensaje("Producto eliminado exitosamente.", 'success');
+          cargarProductos();
+        })
+        .catch(err => {
+          console.error("Error:", err);
+          mostrarMensaje("Error al eliminar el producto.", 'error');
+        });
     }
   };
 
-  useEffect(() => { fetchProductos(); }, []);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setMsg({ type: "", text: "" });
-    try {
-      const cleanData = {
-        nombre: form.nombre.trim(),
-        precio: parseFloat(form.precio),
-        stock: parseInt(form.stock) || 0
-      };
-      if (form.categoria_id && /^\d+$/.test(form.categoria_id)) {
-        cleanData.categoria_id = parseInt(form.categoria_id);
-      }
-      if (!cleanData.nombre || isNaN(cleanData.precio)) throw new Error("Nombre y precio obligatorios");
-
-      const method = editId ? "PUT" : "POST";
-      const url = editId ? `${API_URL}${editId}/` : API_URL;
-      const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(cleanData) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error en el servidor");
-
-      setMsg({ type: "success", text: editId ? "✅ Producto actualizado" : "✅ Producto creado" });
-      setForm({ nombre: "", precio: "", stock: "", categoria_id: "" });
-      setEditId(null);
-      fetchProductos();
-    } catch (err) {
-      setMsg({ type: "error", text: "❌ " + err.message });
-    } finally {
-      // 🔑 FIX: SIEMPRE se ejecuta, liberando el botón
-      setLoading(false);
-      setTimeout(() => setMsg({ type: "", text: "" }), 3000);
-    }
+  // Función para limpiar formulario
+  const limpiarFormulario = () => {
+    setNombre('');
+    setPrecio('');
+    setStock('');
+    setCategoriaId('');
+    setEditandoId(null);
   };
 
-  const handleEdit = (p) => {
-    setEditId(p.id);
-    setForm({ nombre: p.nombre, precio: String(p.precio), stock: String(p.stock), categoria_id: p.categoria_id || "" });
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  // Obtener nombre de categoría por ID
+  const obtenerNombreCategoria = (categoriaId) => {
+    const categoria = categorias.find(cat => cat.id === categoriaId);
+    return categoria ? categoria.nombre : 'Sin categoría';
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("¿Eliminar registro?")) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_URL}${id}/`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Error al eliminar");
-      setMsg({ type: "success", text: "🗑️ Eliminado correctamente" });
-      fetchProductos();
-    } catch (err) {
-      setMsg({ type: "error", text: err.message });
-    } finally {
-      setLoading(false);
-      setTimeout(() => setMsg({ type: "", text: "" }), 3000);
-    }
-  };
-
-  return (
-    <div className="min-h-screen pb-10 relative overflow-hidden bg-gray-50">
-      <div className="fixed top-0 left-0 w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
-      <div className="fixed top-0 right-0 w-96 h-96 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
-
-      <main className="relative z-10 max-w-5xl mx-auto px-4 pt-6">
-        <Link to="/" className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-800 mb-6 transition-colors">← Volver al Inicio</Link>
-
-        <header className="text-center mb-10 fade-in-up">
-          <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 mb-2">📦 Inventario Smart</h1>
-          <p className="text-gray-500">Sistema de gestión dinámica y responsiva</p>
+  // ==================== PÁGINA DE INICIO ====================
+  if (vista === 'home') {
+    return (
+      <div style={{ fontFamily: 'Inter, sans-serif', minHeight: '100vh', backgroundColor: '#F9FAFB' }}>
+        {/* Header con gradiente */}
+        <header style={{
+          background: 'linear-gradient(135deg, #1E3A8A 0%, #6B21A8 100%)',
+          padding: '4rem 2rem',
+          textAlign: 'center',
+          color: 'white'
+        }}>
+          <h1 style={{ fontSize: '3rem', fontWeight: 'bold', marginBottom: '1rem' }}>
+            Papelería "El Lápiz Dorado"
+          </h1>
+          <p style={{ fontSize: '1.25rem', marginBottom: '2rem', opacity: 0.9 }}>
+            Tradición, innovación y eficiencia desde 1998
+          </p>
+          <button
+            onClick={() => setVista('inventario')}
+            style={{
+              backgroundColor: 'white',
+              color: '#1E3A8A',
+              padding: '1rem 2rem',
+              fontSize: '1.1rem',
+              fontWeight: 'bold',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+            }}
+          >
+            Ir al Sistema de Inventario
+          </button>
         </header>
 
-        {msg.text && (
-          <div className={`fixed top-5 right-5 z-50 px-6 py-3 rounded-lg shadow-lg border-l-4 text-sm font-bold fade-in-up ${msg.type === 'success' ? 'bg-white text-green-600 border-green-500' : 'bg-white text-red-600 border-red-500'}`}>{msg.text}</div>
-        )}
+        {/* Sección informativa */}
+        <div style={{ maxWidth: '1200px', margin: '3rem auto', padding: '0 2rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+            {/* Nuestra Historia */}
+            <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+              <h2 style={{ color: '#1E3A8A', marginBottom: '1rem' }}>📖 Nuestra Historia</h2>
+              <p style={{ color: '#6B7280', lineHeight: '1.6' }}>
+                Fundada en 1998, Papelería El Lápiz Dorado nació como un pequeño negocio familiar con el objetivo de ofrecer materiales de calidad. A lo largo de 26 años, nos hemos convertido en un referente de confianza para estudiantes, docentes y profesionales.
+              </p>
+            </div>
 
-        <section className="glass-panel p-6 mb-10 fade-in-up" style={{ animationDelay: '0.1s' }}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-700">{editId ? "✏️ Modificar Producto" : "➕ Agregar Nuevo"}</h2>
-            {editId && <button onClick={() => { setEditId(null); setForm({ nombre: "", precio: "", stock: "", categoria_id: "" }); }} className="text-xs text-gray-400 hover:text-red-500 underline">Cancelar</button>}
-          </div>
-          <form onSubmit={handleSubmit} className="grid gap-4 grid-cols-1 md:grid-cols-5">
-            <div className="md:col-span-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1">Nombre</label><input name="nombre" value={form.nombre} onChange={(e)=>setForm({...form, nombre:e.target.value})} className="input-dynamic" placeholder="Ej. Papel Bond" required disabled={loading} /></div>
-            <div className="md:col-span-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1">Precio</label><input name="precio" type="number" step="0.01" value={form.precio} onChange={(e)=>setForm({...form, precio:e.target.value})} className="input-dynamic" placeholder="0.00" required disabled={loading} /></div>
-            <div className="md:col-span-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1">Stock</label><input name="stock" type="number" value={form.stock} onChange={(e)=>setForm({...form, stock:e.target.value})} className="input-dynamic" placeholder="10" disabled={loading} /></div>
-            <div className="md:col-span-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1">Cat. ID</label><input name="categoria_id" type="number" value={form.categoria_id} onChange={(e)=>setForm({...form, categoria_id:e.target.value})} className="input-dynamic" placeholder="Opcional" disabled={loading} /></div>
-            <div className="md:col-span-1 flex items-end"><button type="submit" disabled={loading} className={`btn-primary ${loading ? 'opacity-70' : ''}`}>{loading ? (editId ? "Guardando..." : "Creando...") : (editId ? "💾 Guardar" : "✨ Crear")}</button></div>
-          </form>
-        </section>
+            {/* Misión */}
+            <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+              <h2 style={{ color: '#1E3A8A', marginBottom: '1rem' }}> Misión</h2>
+              <p style={{ color: '#6B7280', lineHeight: '1.6' }}>
+                Brindar soluciones de papelería con calidad, precio justo y atención personalizada, apoyados en herramientas digitales que garanticen eficiencia operativa y satisfacción del cliente.
+              </p>
+            </div>
 
-        <section className="glass-panel overflow-hidden fade-in-up" style={{ animationDelay: '0.2s' }}>
-          <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
-            <h2 className="font-bold text-gray-600">📋 Registros Actuales ({productos.length})</h2>
-            {loading && !initialLoad && <span className="text-xs text-slate-400 animate-pulse">Sincronizando...</span>}
+            {/* Visión */}
+            <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+              <h2 style={{ color: '#1E3A8A', marginBottom: '1rem' }}>🌟 Visión</h2>
+              <p style={{ color: '#6B7280', lineHeight: '1.6' }}>
+                Ser la papelería líder en la región, reconocida por nuestra innovación tecnológica, servicio excepcional y compromiso con la educación y el desarrollo profesional de nuestra comunidad.
+              </p>
+            </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="text-xs text-gray-400 uppercase bg-gray-50/80">
-                  <th className="px-6 py-3 font-semibold">ID</th><th className="px-6 py-3 font-semibold">Producto</th><th className="px-6 py-3 font-semibold">Precio</th><th className="px-6 py-3 font-semibold">Stock</th><th className="px-6 py-3 font-semibold text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {initialLoad ? (
-                  [1,2,3].map(i => (<tr key={i}><td className="px-6 py-4"><div className="h-4 w-8 loading-skeleton rounded"></div></td><td className="px-6 py-4"><div className="h-4 w-32 loading-skeleton rounded"></div></td><td className="px-6 py-4"><div className="h-4 w-16 loading-skeleton rounded"></div></td><td className="px-6 py-4"><div className="h-4 w-10 loading-skeleton rounded"></div></td><td className="px-6 py-4"><div className="h-4 w-20 loading-skeleton rounded"></div></td></tr>))
-                ) : productos.length === 0 ? (
-                  <tr><td colSpan="5" className="text-center py-10 text-gray-400"><span className="text-4xl block mb-2">📂</span>No hay productos registrados.</td></tr>
-                ) : (
-                  productos.map((p) => (
-                    <tr key={p.id} className="hover:bg-indigo-50/30 transition-colors duration-200 group">
-                      <td className="px-6 py-4 text-gray-400 font-mono text-sm">#{p.id}</td>
-                      <td className="px-6 py-4 font-bold text-gray-700">{p.nombre}</td>
-                      <td className="px-6 py-4 text-green-600 font-medium">${Number(p.precio).toFixed(2)}</td>
-                      <td className="px-6 py-4"><span className={`px-2 py-1 rounded-full text-xs font-bold ${p.stock < 5 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>{p.stock} u.</span></td>
-                      <td className="px-6 py-4 text-right space-x-2 opacity-80 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => handleEdit(p)} className="btn-secondary hover:bg-indigo-200 hover:text-indigo-700">Editar</button>
-                        <button onClick={() => handleDelete(p.id)} className="btn-secondary hover:bg-red-200 hover:text-red-700">️</button>
+        </div>
+
+        {/* Footer */}
+        <footer style={{ backgroundColor: '#1F2937', color: 'white', textAlign: 'center', padding: '2rem', marginTop: '4rem' }}>
+          <p>&copy; 2024 Papelería El Lápiz Dorado. Todos los derechos reservados.</p>
+        </footer>
+      </div>
+    );
+  }
+
+  // ==================== SISTEMA DE INVENTARIO ====================
+  return (
+    <div style={{ fontFamily: 'Inter, sans-serif', minHeight: '100vh', backgroundColor: '#F9FAFB' }}>
+      {/* Notificación */}
+      {mensaje && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          backgroundColor: tipoMensaje === 'success' ? '#10B981' : '#EF4444',
+          color: 'white',
+          padding: '1rem 2rem',
+          borderRadius: '8px',
+          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+          zIndex: 1000
+        }}>
+          {mensaje}
+        </div>
+      )}
+
+      {/* Header */}
+      <header style={{
+        backgroundColor: 'white',
+        padding: '1.5rem 2rem',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <button
+          onClick={() => setVista('home')}
+          style={{
+            backgroundColor: 'transparent',
+            border: 'none',
+            color: '#1E3A8A',
+            fontSize: '1rem',
+            cursor: 'pointer',
+            fontWeight: 'bold'
+          }}
+        >
+          ← Volver al Inicio
+        </button>
+        <h1 style={{ color: '#1E3A8A', fontSize: '2rem', fontWeight: 'bold' }}>
+          📦 Inventario Smart
+        </h1>
+        <div style={{ width: '120px' }}></div>
+      </header>
+
+      {/* Contenido principal */}
+      <div style={{ maxWidth: '1200px', margin: '2rem auto', padding: '0 2rem' }}>
+        
+        {/* Formulario de alta */}
+        <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', marginBottom: '2rem' }}>
+          <h2 style={{ color: '#1E3A8A', marginBottom: '1.5rem', fontSize: '1.5rem' }}>
+            {editandoId ? '✏️ Editar Producto' : '➕ Agregar Nuevo'}
+          </h2>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+            {/* Campo Nombre */}
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: '#374151' }}>
+                NOMBRE *
+              </label>
+              <input
+                type="text"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                placeholder="Ej. Papel Bond"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '6px',
+                  fontSize: '1rem'
+                }}
+              />
+            </div>
+
+            {/* Campo Precio */}
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: '#374151' }}>
+                PRECIO *
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={precio}
+                onChange={(e) => setPrecio(e.target.value)}
+                placeholder="0.00"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '6px',
+                  fontSize: '1rem'
+                }}
+              />
+            </div>
+
+            {/* Campo Stock */}
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: '#374151' }}>
+                STOCK *
+              </label>
+              <input
+                type="number"
+                value={stock}
+                onChange={(e) => setStock(e.target.value)}
+                placeholder="10"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '6px',
+                  fontSize: '1rem'
+                }}
+              />
+            </div>
+
+            {/* Campo Categoría (Dropdown) */}
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: '#374151' }}>
+                CATEGORÍA
+              </label>
+              <select
+                value={categoriaId}
+                onChange={(e) => setCategoriaId(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #D1D5DB',
+                  borderRadius: '6px',
+                  fontSize: '1rem',
+                  backgroundColor: 'white'
+                }}
+              >
+                <option value="">-- Selecciona una categoría --</option>
+                {categorias.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Botones */}
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <button
+              onClick={handleGuardar}
+              style={{
+                backgroundColor: '#F59E0B',
+                color: 'white',
+                padding: '0.75rem 2rem',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '1rem',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
+            >
+              {editandoId ? '💾 Actualizar' : '✨ Crear'}
+            </button>
+            {editandoId && (
+              <button
+                onClick={limpiarFormulario}
+                style={{
+                  backgroundColor: '#6B7280',
+                  color: 'white',
+                  padding: '0.75rem 2rem',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '1rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancelar
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Tabla de productos */}
+        <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+          <h2 style={{ color: '#1E3A8A', marginBottom: '1.5rem', fontSize: '1.5rem' }}>
+            📋 Registros Actuales ({productos.length})
+          </h2>
+          
+          {productos.length === 0 ? (
+            <p style={{ textAlign: 'center', color: '#6B7280', padding: '2rem' }}>
+              No hay productos registrados. ¡Agrega el primero!
+            </p>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#F3F4F6' }}>
+                    <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #E5E7EB' }}>ID</th>
+                    <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #E5E7EB' }}>PRODUCTO</th>
+                    <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #E5E7EB' }}>PRECIO</th>
+                    <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #E5E7EB' }}>STOCK</th>
+                    <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #E5E7EB' }}>CATEGORÍA</th>
+                    <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '2px solid #E5E7EB' }}>ACCIONES</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {productos.map((producto) => (
+                    <tr key={producto.id} style={{ borderBottom: '1px solid #E5E7EB' }}>
+                      <td style={{ padding: '1rem', color: '#6B7280' }}>#{producto.id}</td>
+                      <td style={{ padding: '1rem', fontWeight: 'bold', color: '#1F2937' }}>{producto.nombre}</td>
+                      <td style={{ padding: '1rem', color: '#10B981', fontWeight: 'bold' }}>${producto.precio}</td>
+                      <td style={{ padding: '1rem' }}>
+                        <span style={{
+                          backgroundColor: producto.stock > 10 ? '#D1FAE5' : '#FEE2E2',
+                          color: producto.stock > 10 ? '#065F46' : '#991B1B',
+                          padding: '0.25rem 0.75rem',
+                          borderRadius: '9999px',
+                          fontSize: '0.875rem',
+                          fontWeight: 'bold'
+                        }}>
+                          {producto.stock} u.
+                        </span>
+                      </td>
+                      <td style={{ padding: '1rem', color: '#6B7280' }}>
+                        {obtenerNombreCategoria(producto.categoria_id)}
+                      </td>
+                      <td style={{ padding: '1rem' }}>
+                        <button
+                          onClick={() => handleEditar(producto)}
+                          style={{
+                            backgroundColor: '#3B82F6',
+                            color: 'white',
+                            border: 'none',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            marginRight: '0.5rem',
+                            fontSize: '0.875rem'
+                          }}
+                        >
+                          ️ Editar
+                        </button>
+                        <button
+                          onClick={() => handleEliminar(producto.id)}
+                          style={{
+                            backgroundColor: '#EF4444',
+                            color: 'white',
+                            border: 'none',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.875rem'
+                          }}
+                        >
+                          🗑️ Eliminar
+                        </button>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </main>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
-};
-
-export default function App() {
-  return (
-    <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route path="/inventario" element={<InventoryPage />} />
-    </Routes>
-  );
 }
+
+export default App;
