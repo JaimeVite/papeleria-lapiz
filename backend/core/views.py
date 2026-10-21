@@ -122,3 +122,22 @@ def seed_categorias(request):
         'categorias_creadas': creadas,
         'total': Categoria.objects.count()
     })
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def categorias_api(request):
+    if request.method == "GET":
+        qs = Categoria.objects.all().values('id', 'nombre', 'descripcion', 'fecha_creacion', 'activa')
+        return JsonResponse(list(qs), safe=False, json_dumps_params={'default': str})
+
+    try:
+        data = json.loads(request.body)
+        cat = Categoria.objects.create(
+            nombre=data['nombre'],
+            descripcion=data.get('descripcion', ''),
+            fecha_creacion=timezone.now().date(),
+            activa=data.get('activa', True)
+        )
+        return JsonResponse({"id": cat.id, "nombre": cat.nombre, "status": "creado"}, status=201)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
