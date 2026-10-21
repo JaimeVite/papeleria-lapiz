@@ -165,3 +165,21 @@ def seed_categorias(request):
         'categorias': categorias_creadas,
         'total': Categoria.objects.count()
     })
+
+@csrf_exempt
+def forzar_update_categoria(request, producto_id, categoria_id):
+    """Endpoint temporal para actualizar categoría directamente desde el navegador"""
+    try:
+        # .update() ejecuta un SQL UPDATE directo y siempre funciona
+        affected = Producto.objects.filter(id=producto_id).update(categoria_id=categoria_id)
+        
+        producto = Producto.objects.get(id=producto_id)
+        cat_nombre = producto.categoria.nombre if producto.categoria else "Sin categoría"
+        
+        return JsonResponse({
+            "status": "exitoso",
+            "mensaje": f"Producto {producto.nombre} actualizado a categoría ID {categoria_id} ({cat_nombre})",
+            "filas_afectadas": affected
+        })
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
