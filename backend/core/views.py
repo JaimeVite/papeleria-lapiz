@@ -55,15 +55,18 @@ def producto_detalle(request, pk):
         if request.method == "PUT":
             data = json.loads(request.body)
             
-            if 'nombre' in data:
-                producto.nombre = data['nombre'].strip()
-            if 'precio' in data:
-                producto.precio = float(data['precio'])
-            if 'stock' in data:
-                producto.stock = int(data['stock'])
+            # Actualizar campos normales
+            producto.nombre = data.get('nombre', producto.nombre)
+            producto.precio = data.get('precio', producto.precio)
+            producto.stock = data.get('stock', producto.stock)
+            
+            # LA CLAVE: Actualizar explícitamente la llave foránea
+            if 'categoria_id' in data:
+                # Si envía vacío o null, lo dejamos en None, si no, lo convertimos a entero
+                producto.categoria_id = data['categoria_id'] if data['categoria_id'] else None
                 
             producto.save()
-            return JsonResponse({"status": "actualizado"}, json_dumps_params={'default': str})
+            return JsonResponse({"status": "actualizado", "id": producto.id})
             
         elif request.method == "DELETE":
             producto.delete()

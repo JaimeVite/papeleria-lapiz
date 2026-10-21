@@ -67,7 +67,7 @@ function App() {
       nombre: nombre,
       precio: parseFloat(precio),
       stock: parseInt(stock),
-      categoria_id: categoriaId ? parseInt(categoriaId) : null
+      categoria_id: categoriaId ==="" ? null : parseInt(categoriaId)
     };
 
     const metodo = editandoId ? 'PUT' : 'POST';
