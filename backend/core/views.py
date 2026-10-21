@@ -94,9 +94,10 @@ def home(request):
 
 @csrf_exempt
 def seed_categorias(request):
-    """Endpoint temporal para insertar categorías de prueba"""
+    """Endpoint temporal para insertar categorías y actualizar productos existentes"""
     from django.utils import timezone
     
+    # 1. Crear categorías si no existen
     categorias_data = [
         {'nombre': 'Oficina', 'descripcion': 'Material de oficina'},
         {'nombre': 'Escolar', 'descripcion': 'Útiles escolares'},
@@ -104,7 +105,7 @@ def seed_categorias(request):
         {'nombre': 'Arte', 'descripcion': 'Material de arte'},
     ]
     
-    creadas = []
+    categorias_creadas = {}
     for data in categorias_data:
         cat, created = Categoria.objects.get_or_create(
             nombre=data['nombre'],
@@ -114,13 +115,28 @@ def seed_categorias(request):
                 'activa': True
             }
         )
-        if created:
-            creadas.append(cat.nombre)
+        categorias_creadas[data['nombre']] = cat.id
+    
+    # 2. Actualizar productos existentes con categorías
+    productos_actualizados = []
+    
+    # Actualizar producto "hojas" → categoría Escolar
+    Producto.objects.filter(nombre='hojas').update(categoria_id=categorias_creadas.get('Escolar'))
+    productos_actualizados.append('hojas')
+    
+    # Actualizar producto "Marcadores" → categoría Oficina
+    Producto.objects.filter(nombre='Marcadores').update(categoria_id=categorias_creadas.get('Oficina'))
+    productos_actualizados.append('Marcadores')
+    
+    # Actualizar producto "lapiz" → categoría Oficina
+    Producto.objects.filter(nombre='lapiz').update(categoria_id=categorias_creadas.get('Oficina'))
+    productos_actualizados.append('lapiz')
     
     return JsonResponse({
         'status': 'ok',
-        'categorias_creadas': creadas,
-        'total': Categoria.objects.count()
+        'categorias': categorias_creadas,
+        'productos_actualizados': productos_actualizados,
+        'total_productos': Producto.objects.count()
     })
 
 @csrf_exempt
